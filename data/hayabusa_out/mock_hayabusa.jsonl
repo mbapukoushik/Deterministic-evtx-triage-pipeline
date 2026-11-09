@@ -1,0 +1,4 @@
+{"EventRecordID": 1, "RuleID": "sigma-001", "RuleTitle": "Suspicious PowerShell Encoded Command", "Level": "high", "Tactics": ["execution", "defense-evasion"]}
+{"EventRecordID": 2, "RuleID": "sigma-002", "RuleTitle": "Executable Drop in Public Directory", "Level": "medium", "Tactics": ["persistence"]}
+{"EventRecordID": 3, "RuleID": "sigma-003", "RuleTitle": "Run Key Modification for Persistence", "Level": "critical", "Tactics": ["persistence"]}
+{"EventRecordID": 4, "RuleID": "sigma-004", "RuleTitle": "Suspicious Binary Execution from Public Folder", "Level": "high", "Tactics": ["execution"]}
