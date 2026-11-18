@@ -62,6 +62,8 @@ env/
 
 # Local databases & raw forensic artifacts
 data/sqlite_db/*.db
+data/sqlite_db/*.json
+data/sqlite_db/*.pem
 data/raw_evtx/*
 *.evtx
 *.db
