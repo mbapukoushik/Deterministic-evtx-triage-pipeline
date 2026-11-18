@@ -28,20 +28,29 @@ from config import PipelineConfig, config
 
 logger = logging.getLogger("station2_hayabusa")
 
-# Approved severity weight mapping table
+# Approved severity weight mapping table (canonical levels only)
 WEIGHT_MAP: Dict[str, float] = {
     "none": 0.0,
     "informational": 0.1,
-    " info ": 0.1,
     "low": 0.3,
     "medium": 0.6,
     "high": 0.9,
     "critical": 1.0,
 }
 
+# Aliases emitted by Hayabusa (abbreviated output when -b is not passed) and Sigma variants.
+LEVEL_ALIASES: Dict[str, str] = {
+    "info": "informational",
+    "informational": "informational",
+    "med": "medium",
+    "crit": "critical",
+}
+
 
 def normalize_severity(raw_level: Optional[str]) -> Tuple[str, float]:
-    """Normalizes severity strings, handles whitespace/casing, and supports the 'info' alias.
+    """Normalizes severity strings (case/whitespace-insensitive, Hayabusa aliases supported).
+
+    Unknown, empty or missing levels map to ("none", 0.0).
 
     Returns:
         (normalized_level_str, numerical_weight)
@@ -50,14 +59,33 @@ def normalize_severity(raw_level: Optional[str]) -> Tuple[str, float]:
         return ("none", 0.0)
 
     clean = raw_level.strip().lower()
-    if clean in ("info", "informational"):
-        return ("informational", 0.1)
+    clean = LEVEL_ALIASES.get(clean, clean)
+    if clean not in WEIGHT_MAP:
+        return ("none", 0.0)
+    return (clean, WEIGHT_MAP[clean])
 
-    weight = WEIGHT_MAP.get(clean, 0.0)
-    if clean not in ("none", "informational", "low", "medium", "high", "critical"):
-        clean = "none"
 
-    return (clean, weight)
+def extract_tactics(alert: Dict[str, Any]) -> List[str]:
+    """Extracts MITRE ATT&CK tactics from a Hayabusa/Sigma alert.
+
+    Only tactic keys are read ("MitreTactics", "Tactics", "tactics"). "MitreTags" holds
+    technique IDs (e.g. T1558) and is deliberately NOT treated as tactics.
+    Missing, null or malformed keys yield an empty list.
+    """
+    raw = None
+    for key in ("MitreTactics", "Tactics", "tactics"):
+        if alert.get(key):
+            raw = alert[key]
+            break
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        items = raw.split(",")
+    elif isinstance(raw, list):
+        items = [str(t) for t in raw if t is not None]
+    else:
+        return []
+    return sorted({t.strip().lower() for t in items if t.strip()})
 
 
 def normalize_windows_cli(cmd: Optional[str]) -> Optional[str]:
@@ -117,7 +145,7 @@ def normalize_windows_cli(cmd: Optional[str]) -> Optional[str]:
 
 @dataclass
 class SigmaAlertAggregate:
-    """Aggregated Sigma detections for a single EventRecordID."""
+    """Aggregated Sigma detections for a single EventRecordID (scoped by Channel + Computer)."""
 
     record_index: int
     max_rule_id: Optional[str] = None
@@ -125,6 +153,33 @@ class SigmaAlertAggregate:
     max_level: str = "none"
     max_weight: float = 0.0
     tactics: List[str] = field(default_factory=list)
+    channel: Optional[str] = None
+    computer: Optional[str] = None
+    evtx_file: Optional[str] = None
+
+
+_CHANNEL_ABBREV_MAP: Dict[str, str] = {
+    "sysmon": "microsoft-windows-sysmon/operational",
+    "security": "security",
+    "system": "system",
+    "application": "application",
+    "pwsh": "microsoft-windows-powershell/operational",
+    "powershell": "windows powershell",
+}
+
+
+def _normalize_channel(channel: Optional[str]) -> Optional[str]:
+    if not channel or not isinstance(channel, str):
+        return None
+    low = channel.strip().lower()
+    return _CHANNEL_ABBREV_MAP.get(low, low)
+
+
+def _extract_channel_from_xml(raw_xml: Optional[str]) -> Optional[str]:
+    if not raw_xml:
+        return None
+    m = re.search(r"<Channel>([^<]+)</Channel>", raw_xml)
+    return _normalize_channel(m.group(1)) if m else None
 
 
 def run_hayabusa(
@@ -133,9 +188,10 @@ def run_hayabusa(
     output_jsonl: str,
     extra_args: Optional[List[str]] = None,
 ) -> Tuple[int, str, str]:
-    """Executes the Hayabusa binary using Python subprocess with safe argument handling.
+    """Executes the Hayabusa v4 binary using Python subprocess with safe argument handling.
 
-    Never uses shell=True. Captures standard output, errors, and exit codes.
+    Uses dfir-timeline with -U (UTC), -t jsonl, -p super-verbose, -b (full channel names),
+    and never uses shell=True.
 
     Returns:
         (returncode, stdout, stderr)
@@ -149,14 +205,29 @@ def run_hayabusa(
 
     cmd = [
         hayabusa_bin,
-        "json-timeline",
+        "dfir-timeline",
         "-f",
         evtx_path,
         "-o",
         output_jsonl,
-        "--output-jsonl",
-        "--quiet",
+        "-t",
+        "jsonl",
+        "-p",
+        "super-verbose",
+        "-U",
+        "-b",
+        "-w",
+        "-C",
+        "-q",
+        "-N",
     ]
+    bin_dir = os.path.dirname(os.path.abspath(hayabusa_bin))
+    rules_dir = os.path.join(bin_dir, "rules")
+    rules_cfg = os.path.join(rules_dir, "config")
+    if os.path.isdir(rules_dir):
+        cmd.extend(["-r", rules_dir])
+    if os.path.isdir(rules_cfg):
+        cmd.extend(["-c", rules_cfg])
     if extra_args:
         cmd.extend(extra_args)
 
@@ -227,17 +298,15 @@ def parse_hayabusa_jsonl(
             rule_id = alert.get("RuleID") or alert.get("rule_id")
             title = alert.get("RuleTitle") or alert.get("title") or alert.get("RuleName")
             raw_level = alert.get("Level") or alert.get("level") or alert.get("Severity")
+            channel = _normalize_channel(alert.get("Channel") or alert.get("channel"))
+            computer_raw = alert.get("Computer") or alert.get("computer")
+            computer = computer_raw.strip().lower() if isinstance(computer_raw, str) and computer_raw.strip() else None
+            evtx_file = alert.get("EvtxFile") or alert.get("evtx_file")
 
             norm_level, weight = normalize_severity(raw_level)
 
-            # Extract tactics
-            raw_tactics = alert.get("Tactics") or alert.get("tactics") or []
-            if isinstance(raw_tactics, str):
-                parsed_tactics = [t.strip().lower() for t in raw_tactics.split(",") if t.strip()]
-            elif isinstance(raw_tactics, list):
-                parsed_tactics = [str(t).strip().lower() for t in raw_tactics if str(t).strip()]
-            else:
-                parsed_tactics = []
+            # Extract tactics (MitreTactics/Tactics only; MitreTags are technique IDs)
+            parsed_tactics = extract_tactics(alert)
 
             if rec_id not in aggregates:
                 aggregates[rec_id] = SigmaAlertAggregate(
@@ -247,9 +316,18 @@ def parse_hayabusa_jsonl(
                     max_level=norm_level,
                     max_weight=weight,
                     tactics=sorted(list(set(parsed_tactics))),
+                    channel=channel,
+                    computer=computer,
+                    evtx_file=evtx_file,
                 )
             else:
                 existing = aggregates[rec_id]
+                if existing.channel is None and channel is not None:
+                    existing.channel = channel
+                if existing.computer is None and computer is not None:
+                    existing.computer = computer
+                if existing.evtx_file is None and evtx_file is not None:
+                    existing.evtx_file = evtx_file
 
                 # Update max sigma rule if new alert is higher weight
                 # Deterministic tie-breaking: if weights are equal, lower RuleID wins
@@ -297,23 +375,50 @@ def enrich_sqlite_database(
     cur = conn.cursor()
 
     # Query existing records to update
-    cur.execute("SELECT record_index, command_line FROM events")
+    cur.execute("SELECT record_index, host, command_line, raw_xml FROM events")
     rows = cur.fetchall()
 
     updated_count = 0
     matched_alerts_count = 0
+    primary_matched_count = 0
+    fallback_matched_count = 0
     ast_normalized_count = 0
 
-    for rec_idx, raw_cli in rows:
-        # Determine Sigma alert fields
+    for rec_idx, host, raw_cli, raw_xml in rows:
+        # Determine Sigma alert fields using primary (Channel, Computer, RecordID) join
         alert = aggregates.get(rec_idx)
+        matched_alert = None
         if alert is not None:
+            row_channel = _extract_channel_from_xml(raw_xml)
+            row_computer = host.strip().lower() if isinstance(host, str) and host.strip() else None
+            if alert.channel and alert.computer and row_channel and row_computer:
+                if alert.channel == row_channel and alert.computer == row_computer:
+                    matched_alert = alert
+                    primary_matched_count += 1
+                else:
+                    logger.warning(
+                        "Composite key mismatch for RecordID=%d: alert=(%s, %s) vs db=(%s, %s); skipping.",
+                        rec_idx,
+                        alert.channel,
+                        alert.computer,
+                        row_channel,
+                        row_computer,
+                    )
+            else:
+                logger.warning(
+                    "Falling back to RecordID-only join for RecordID=%d (missing Channel/Computer in alert or DB).",
+                    rec_idx,
+                )
+                matched_alert = alert
+                fallback_matched_count += 1
+
+        if matched_alert is not None:
             matched_alerts_count += 1
-            max_rule_id = alert.max_rule_id
-            max_title = alert.max_title
-            max_level = alert.max_level
-            sigma_weight = alert.max_weight
-            tactics_json = json.dumps(alert.tactics) if alert.tactics else None
+            max_rule_id = matched_alert.max_rule_id
+            max_title = matched_alert.max_title
+            max_level = matched_alert.max_level
+            sigma_weight = matched_alert.max_weight
+            tactics_json = json.dumps(matched_alert.tactics) if matched_alert.tactics else None
         else:
             # Preserve approved defaults when no alert matches
             max_rule_id = None
@@ -358,9 +463,18 @@ def enrich_sqlite_database(
     conn.commit()
     conn.close()
 
+    unique_alert_records = len(aggregates)
+    join_hit_rate = (
+        matched_alerts_count / unique_alert_records if unique_alert_records > 0 else 0.0
+    )
+
     return {
         "total_records_processed": updated_count,
         "matched_sigma_records": matched_alerts_count,
+        "primary_matched_records": primary_matched_count,
+        "fallback_matched_records": fallback_matched_count,
+        "unique_alert_records": unique_alert_records,
+        "join_hit_rate": round(join_hit_rate, 4),
         "unmatched_sigma_records": updated_count - matched_alerts_count,
         "ast_normalized_count": ast_normalized_count,
         "use_ast_norm": cfg.use_ast_norm,

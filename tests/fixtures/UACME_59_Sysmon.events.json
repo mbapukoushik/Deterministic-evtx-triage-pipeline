@@ -1,0 +1,21 @@
+[
+ {
+  "record_index": 2164892,
+  "eid": "rec_2164892",
+  "host": "LAPTOP-JU4M3I0E",
+  "timestamp_utc": "2020-10-05T20:43:58.451Z",
+  "sysmon_event_id": 1,
+  "actor_guid": "{00247c92-858e-5f7b-0000-00105241202b}",
+  "actor_process": "C:\\Windows\\System32\\Taskmgr.exe",
+  "action_type": "PROCESS_CREATE",
+  "target_guid": "{00247c92-858e-5f7b-0000-0010e741202b}",
+  "target_entity": "C:\\Windows\\System32\\cmd.exe",
+  "command_line": "cmd.exe",
+  "logon_guid": "{00247c92-8c36-5f75-0000-002034e39103}",
+  "user": "LAPTOP-JU4M3I0E\\bouss",
+  "raw_event_pointer": "file_sha256=1de3775180143fd5d956bae48f572367534ae8c10f6ffbe98dd4b4e0e47e0fa1;record_index=2164892",
+  "raw_event_hash": "ff6aaaf47a1650a06680a9ae71a8c62368a4856e4b79d7cf18ba919249ffa9a9",
+  "chain_hash": "b1ecf5c98dba312865f8fd76da45f382ff91e5d1b031f89592c3f766c41f626c",
+  "raw_xml": "<Event xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><System><Provider Name=\"Microsoft-Windows-Sysmon\" Guid=\"{5770385f-c22a-43e0-bf4c-06f5698ffbd9}\"></Provider>\n<EventID Qualifiers=\"\">1</EventID>\n<Version>5</Version>\n<Level>4</Level>\n<Task>1</Task>\n<Opcode>0</Opcode>\n<Keywords>0x8000000000000000</Keywords>\n<TimeCreated SystemTime=\"2020-10-05 20:43:58.451315+00:00\"></TimeCreated>\n<EventRecordID>2164892</EventRecordID>\n<Correlation ActivityID=\"\" RelatedActivityID=\"\"></Correlation>\n<Execution ProcessID=\"5424\" ThreadID=\"6708\"></Execution>\n<Channel>Microsoft-Windows-Sysmon/Operational</Channel>\n<Computer>LAPTOP-JU4M3I0E</Computer>\n<Security UserID=\"S-1-5-18\"></Security>\n</System>\n<EventData><Data Name=\"RuleName\"></Data>\n<Data Name=\"UtcTime\">2020-10-05 20:43:58.450</Data>\n<Data Name=\"ProcessGuid\">{00247c92-858e-5f7b-0000-0010e741202b}</Data>\n<Data Name=\"ProcessId\">6636</Data>\n<Data Name=\"Image\">C:\\Windows\\System32\\cmd.exe</Data>\n<Data Name=\"FileVersion\">10.0.18362.449 (WinBuild.160101.0800)</Data>\n<Data Name=\"Description\">Windows Command Processor</Data>\n<Data Name=\"Product\">Microsoft&#174; Windows&#174; Operating System</Data>\n<Data Name=\"Company\">Microsoft Corporation</Data>\n<Data Name=\"OriginalFileName\">Cmd.Exe</Data>\n<Data Name=\"CommandLine\">cmd.exe</Data>\n<Data Name=\"CurrentDirectory\">C:\\windows\\</Data>\n<Data Name=\"User\">LAPTOP-JU4M3I0E\\bouss</Data>\n<Data Name=\"LogonGuid\">{00247c92-8c36-5f75-0000-002034e39103}</Data>\n<Data Name=\"LogonId\">0x000000000391e334</Data>\n<Data Name=\"TerminalSessionId\">2</Data>\n<Data Name=\"IntegrityLevel\">High</Data>\n<Data Name=\"Hashes\">SHA1=8DCA9749CD48D286950E7A9FA1088C937CBCCAD4,MD5=D7AB69FAD18D4A643D84A271DFC0DBDF,SHA256=FF79D3C4A0B7EB191783C323AB8363EBD1FD10BE58D8BCC96B07067743CA81D5,IMPHASH=272245E2988E1E430500B852C4FB5E18</Data>\n<Data Name=\"ParentProcessGuid\">{00247c92-858e-5f7b-0000-00105241202b}</Data>\n<Data Name=\"ParentProcessId\">18404</Data>\n<Data Name=\"ParentImage\">C:\\Windows\\System32\\Taskmgr.exe</Data>\n<Data Name=\"ParentCommandLine\">C:\\windows\\system32\\taskmgr.exe</Data>\n</EventData>\n</Event>\n"
+ }
+]

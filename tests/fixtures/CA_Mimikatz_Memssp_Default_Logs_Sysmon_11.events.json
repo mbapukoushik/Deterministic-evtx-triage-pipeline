@@ -1,0 +1,21 @@
+[
+ {
+  "record_index": 385052,
+  "eid": "rec_385052",
+  "host": "MSEDGEWIN10",
+  "timestamp_utc": "2020-09-11T12:10:22.398Z",
+  "sysmon_event_id": 11,
+  "actor_guid": "{747f3d96-672c-5f5b-0d00-00000000fc00}",
+  "actor_process": "C:\\Windows\\system32\\lsass.exe",
+  "action_type": "FILE_CREATE",
+  "target_guid": null,
+  "target_entity": "C:\\Windows\\System32\\mimilsa.log",
+  "command_line": null,
+  "logon_guid": null,
+  "user": null,
+  "raw_event_pointer": "file_sha256=a5c52377c8a430fc4838fdc9b7c1638125b95c618d7efa930be0562124e0bfba;record_index=385052",
+  "raw_event_hash": "1497b5cbe5760afe1a856fead1137859ed8fd291fd6f1574f0f1d85915038e0c",
+  "chain_hash": "baa6f5e02ebfa603d88bb56895b77f5e2e7d4236c1874654abe39e8b46858655",
+  "raw_xml": "<Event xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><System><Provider Name=\"Microsoft-Windows-Sysmon\" Guid=\"{5770385f-c22a-43e0-bf4c-06f5698ffbd9}\"></Provider>\n<EventID Qualifiers=\"\">11</EventID>\n<Version>2</Version>\n<Level>4</Level>\n<Task>11</Task>\n<Opcode>0</Opcode>\n<Keywords>0x8000000000000000</Keywords>\n<TimeCreated SystemTime=\"2020-09-11 12:10:22.398726+00:00\"></TimeCreated>\n<EventRecordID>385052</EventRecordID>\n<Correlation ActivityID=\"\" RelatedActivityID=\"\"></Correlation>\n<Execution ProcessID=\"3044\" ThreadID=\"3900\"></Execution>\n<Channel>Microsoft-Windows-Sysmon/Operational</Channel>\n<Computer>MSEDGEWIN10</Computer>\n<Security UserID=\"S-1-5-18\"></Security>\n</System>\n<EventData><Data Name=\"RuleName\">-</Data>\n<Data Name=\"UtcTime\">2020-09-11 12:10:22.357</Data>\n<Data Name=\"ProcessGuid\">{747f3d96-672c-5f5b-0d00-00000000fc00}</Data>\n<Data Name=\"ProcessId\">640</Data>\n<Data Name=\"Image\">C:\\Windows\\system32\\lsass.exe</Data>\n<Data Name=\"TargetFilename\">C:\\Windows\\System32\\mimilsa.log</Data>\n<Data Name=\"CreationUtcTime\">2020-09-11 12:10:22.357</Data>\n</EventData>\n</Event>\n"
+ }
+]
